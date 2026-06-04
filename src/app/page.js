@@ -21,6 +21,8 @@ export default function Dashboard() {
   const [data, setData] = useState({ laptops: [], peminjaman: [], pengembalian: [] });
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState({ show: false, type: '', payload: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const fetchData = async () => {
     setLoading(true);
@@ -80,7 +82,7 @@ export default function Dashboard() {
   // Process history
   // Remove duplicates by ID, filter out empty rows, and sort by latest action
   const seen = new Set();
-  let history = [...data.peminjaman].filter(item => {
+  const allHistory = [...data.peminjaman].filter(item => {
     // Skip empty rows (no Laptop ID or Borrower Name)
     if (!item.LAPTOP_ID || !item.NAMA_PEMINJAM) return false;
     
@@ -88,7 +90,11 @@ export default function Dashboard() {
     if (seen.has(item.ID)) return false;
     seen.add(item.ID);
     return true;
-  }).sort((a, b) => getActionTime(b) - getActionTime(a)).slice(0, 5);
+  }).sort((a, b) => getActionTime(b) - getActionTime(a));
+
+  const totalPages = Math.max(1, Math.ceil(allHistory.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const history = allHistory.slice(startIndex, startIndex + itemsPerPage);
 
   // Data for Charts
   const aktif = data.peminjaman.filter(p => (p.STATUS || '').toLowerCase() === 'aktif').length;
@@ -348,7 +354,7 @@ export default function Dashboard() {
 
                   return (
                     <tr onClick={() => setModal({ show: true, type: 'laptop', payload: item.LAPTOP_ID })} key={item.ID || idx} className="hover:bg-slate-50/80 transition-colors group cursor-pointer text-[13px]">
-                      <td className="px-6 py-4 text-center font-bold text-indigo-600">{idx + 1}</td>
+                      <td className="px-6 py-4 text-center font-bold text-indigo-600">{startIndex + idx + 1}</td>
                       <td className="px-6 py-4 font-bold text-slate-800">{laptopName}</td>
                       <td className="px-6 py-4 text-slate-600">{item.NAMA_PEMINJAM || '-'}</td>
                       <td className="px-6 py-4 text-slate-600">{formatDateStr(item.TGL_PINJAM)}</td>
@@ -362,6 +368,31 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+            
+            {/* Pagination Controls */}
+            {allHistory.length > itemsPerPage && (
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                <span className="text-sm text-slate-500 font-medium">
+                  Menampilkan <span className="font-bold text-slate-700">{startIndex + 1}</span> - <span className="font-bold text-slate-700">{Math.min(startIndex + itemsPerPage, allHistory.length)}</span> dari <span className="font-bold text-slate-700">{allHistory.length}</span> riwayat
+                </span>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    Sebelumnya
+                  </button>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
