@@ -5,13 +5,28 @@ export default function LogoutButton() {
   const [isAuth, setIsAuth] = useState(false);
 
   useEffect(() => {
-    // Show logout button only if logged in
-    const auth = localStorage.getItem('jamlaper_auth');
-    setIsAuth(auth === 'true');
+    const checkAuth = () => {
+      const auth = localStorage.getItem('jamlaper_auth');
+      setIsAuth(auth === 'true');
+    };
+
+    // Check initially
+    checkAuth();
+
+    // Listen for custom event from AuthWrapper
+    window.addEventListener('auth-change', checkAuth);
+    // Listen for storage changes (if logged in/out from another tab)
+    window.addEventListener('storage', checkAuth);
+
+    return () => {
+      window.removeEventListener('auth-change', checkAuth);
+      window.removeEventListener('storage', checkAuth);
+    };
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('jamlaper_auth');
+    window.dispatchEvent(new Event('auth-change'));
     window.location.reload();
   };
 
